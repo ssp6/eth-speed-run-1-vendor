@@ -15,14 +15,14 @@ import { useEthersContext } from 'eth-hooks/context';
 import { useDexEthPrice } from 'eth-hooks/dapps';
 import { BigNumber, ethers } from 'ethers';
 import { FC, useContext, useEffect, useState } from 'react';
-import { Vendor, YourToken as YourTokenContract } from '~~/generated/contract-types';
+import { Vendor, FreeToken as FreeTokenContract } from '~~/generated/contract-types';
 import { useAppContracts } from '../main/hooks/useAppContracts';
 
-export interface IYourTokenProps {
+export interface IFreeTokenProps {
   mainnetProvider: StaticJsonRpcProvider;
 }
 
-export const YourToken: FC<IYourTokenProps> = (props) => {
+export const FreeToken: FC<IFreeTokenProps> = (props) => {
   const { mainnetProvider } = props;
 
   const appContractConfig = useAppContracts();
@@ -33,34 +33,34 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
   const address = ethersContext.account ?? '';
 
   const vendorContract = readContracts['Vendor'] as Vendor;
-  const yourTokenContract = readContracts['YourToken'] as YourTokenContract;
+  const FreeTokenContract = readContracts['FreeToken'] as FreeTokenContract;
 
   const vendorContractWrite = writeContracts['Vendor'] as Vendor;
-  const yourTokenContractWrite = writeContracts['YourToken'] as YourTokenContract;
+  const FreeTokenContractWrite = writeContracts['FreeToken'] as FreeTokenContract;
 
   const ethComponentsSettings = useContext(EthComponentsSettingsContext);
   const gasPrice = useGasPrice(ethersContext.chainId, 'fast');
   const ethPrice = useDexEthPrice(mainnetProvider);
   const tx = transactor(ethComponentsSettings, ethersContext?.signer, gasPrice);
 
-  const [yourTokenBalance, setYourTokenBalance] = useState<BigNumber>();
+  const [FreeTokenBalance, setFreeTokenBalance] = useState<BigNumber>();
   useOnRepetition(
     async (): Promise<void> => {
-      const getyourTokenBalance = async () => {
-        if (!yourTokenContract) return;
+      const getFreeTokenBalance = async () => {
+        if (!FreeTokenContract) return;
 
-        const yourTokenBalance = await yourTokenContract.balanceOf(address);
-        console.log('🏵 yourTokenBalance:', yourTokenBalance ? ethers.utils.formatEther(yourTokenBalance) : '...');
-        setYourTokenBalance(yourTokenBalance);
+        const FreeTokenBalance = await FreeTokenContract.balanceOf(address);
+        console.log('🏵 FreeTokenBalance:', FreeTokenBalance ? ethers.utils.formatEther(FreeTokenBalance) : '...');
+        setFreeTokenBalance(FreeTokenBalance);
       };
-      getyourTokenBalance();
+      getFreeTokenBalance();
     },
     {
       provider: mainnetProvider,
     }
   );
 
-  const [tokensPerEth, setTokensPerEth] = useState<number>();
+  const [tokensPerEth, setTokensPerEth] = useState<number>(1);
   useEffect(() => {
     const getTokensPerEth = async () => {
       if (!vendorContract) return;
@@ -72,8 +72,8 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
     getTokensPerEth();
   }, [vendorContract]);
 
-  const vendorApproval = useContractReader<BigNumber[]>(yourTokenContract, {
-    contractName: 'YourToken',
+  const vendorApproval = useContractReader<BigNumber[]>(FreeTokenContract, {
+    contractName: 'FreeToken',
     functionName: 'allowance',
     functionArgs: [address, vendorContract?.address],
   });
@@ -121,7 +121,7 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
   useOnRepetition(
     async (): Promise<void> => {
       const getVendorTokenBalance = async () => {
-        const balance = await yourTokenContract?.balanceOf(vendorContract?.address);
+        const balance = await FreeTokenContract?.balanceOf(vendorContract?.address);
         console.log('🏵 vendorTokenBalance:', balance ? ethers.utils.formatEther(balance) : '...');
         setVendorTokenBalance(balance);
       };
@@ -133,7 +133,7 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
   );
 
   let transferDisplay = <></>;
-  if (yourTokenBalance) {
+  if (FreeTokenBalance) {
     transferDisplay = (
       <div style={{ padding: 8, marginTop: 32, width: 420, margin: 'auto' }}>
         <Card title="Transfer tokens">
@@ -165,7 +165,7 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
                   return;
                 }
 
-                tx(yourTokenContractWrite.transfer(tokenSendToAddress, ethers.utils.parseEther('' + tokenSendAmount)));
+                tx(FreeTokenContractWrite.transfer(tokenSendToAddress, ethers.utils.parseEther('' + tokenSendAmount)));
               }}>
               Send Tokens
             </Button>
@@ -182,7 +182,7 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
       <div style={{ padding: 8, marginTop: 32, width: 300, margin: 'auto' }}>
         <Card title="Your Tokens" extra={<a href="#">code</a>}>
           <div style={{ padding: 8 }}>
-            <Balance balance={yourTokenBalance} address={undefined} price={ethPrice} />
+            <Balance balance={FreeTokenBalance} address={undefined} price={ethPrice / tokensPerEth} />
           </div>
         </Card>
       </div>
@@ -222,7 +222,7 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
           </div>
         </Card>
       </div>
-      {/* Extra UI for buying the tokens back from the user using "approve" and "sellTokens"
+      {/* Extra UI for buying the tokens back from the user using "approve" and "sellTokens" */}
       <Divider />
       <div style={{ padding: 8, marginTop: 32, width: 300, margin: 'auto' }}>
         <Card title="Sell Tokens">
@@ -268,7 +268,7 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
 
                   setBuying(true);
                   await tx(
-                    yourTokenContractWrite.approve(
+                    FreeTokenContractWrite.approve(
                       readContracts.Vendor.address,
                       ethers.utils.parseEther(tokenSellAmount.toString())
                     )
@@ -281,7 +281,6 @@ export const YourToken: FC<IYourTokenProps> = (props) => {
           )}
         </Card>
       </div>
-      */}
       <div style={{ padding: 8, marginTop: 32 }}>
         <div>Vendor Token Balance:</div>
         <Balance balance={vendorTokenBalance} address={undefined} />

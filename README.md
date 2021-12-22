@@ -1,10 +1,31 @@
 # 🏗 scaffold-eth | 🏰 BuidlGuidl
+## My implementation
+
+- Deployed on https at `https://sean-eth-speed-run-2.surge.sh`
+- Deployed on IPFS at ``
+
+I have went through each point and added some notes beside them on how I handled them.
+
+If redeploy run:
+```bash
+// If make any change to contracts
+yarn deploy --network rinkeby
+// Ensure `const targetNetworkInfo = NETWORKS.rinkeby;` in `providerConfig.ts`
+yarn build
+yarn surge & ipfs
+
+// If only make changes to front end
+// Ensure `const targetNetworkInfo = NETWORKS.rinkeby;` in `providerConfig.ts`
+yarn build
+yarn surge & ipfs
+```
+
 
 ## 🚩 Challenge 2: 🏵 Token Vendor 🤖
 
 > 🤖 Smart contracts are kind of like "always on" _vending machines_ that **anyone** can access. Let's make a decentralized, digital currency. Then, let's build an unstoppable vending machine that will buy and sell the currency. We'll learn about the "approve" pattern for ERC20s and how contract to contract interactions work.
 
-> 🏵 Create `YourToken.sol` smart contract that inherits the **ERC20** token standard from OpenZeppelin. Set your token to `_mint()` **1000** (\* 10 \*\* 18) tokens to the `msg.sender`. Then create a `Vendor.sol` contract that sells your token using a payable `buyTokens()` function.
+> 🏵 Create `FreeToken.sol` smart contract that inherits the **ERC20** token standard from OpenZeppelin. Set your token to `_mint()` **1000** (\* 10 \*\* 18) tokens to the `msg.sender`. Then create a `Vendor.sol` contract that sells your token using a payable `buyTokens()` function.
 
 > 🎛 Edit the frontend that invites the user to `<input\>` an amount of tokens they want to buy. We'll display a preview of the amount of ETH (or USD) it will cost with a confirm button.
 
@@ -14,7 +35,7 @@
 
 > 📱 Part of the challenge is making the **UI/UX** enjoyable and clean! 🤩
 
-🧫 Everything starts by ✏️ Editing `YourToken.sol` in `packages/hardhat/contracts`
+🧫 Everything starts by ✏️ Editing `FreeToken.sol` in `packages/hardhat/contracts`
 
 ---
 
@@ -51,12 +72,12 @@ Make sure you run the commands in the above order. The contract types get genera
 
 ### Checkpoint 2: 🏵Your Token 💵
 
-> 👩‍💻 Edit `YourToken.sol` to inherit the **ERC20** token standard from OpenZeppelin
+> 👩‍💻 Edit `FreeToken.sol` to inherit the **ERC20** token standard from OpenZeppelin
 
 Mint **1000** (\* 10 \*\* 18) in the constructor (to the `msg.sender`) and then send them to your frontend address in the `deploy/00_deploy_your_token.ts`:
 
 ```javascript
-const result = await yourToken.transfer(
+const result = await FreeToken.transfer(
   "**YOUR FRONTEND ADDRESS**",
   ethers.utils.parseEther("1000")
 );
@@ -66,8 +87,8 @@ const result = await yourToken.transfer(
 
 #### 🥅 Goals
 
-- [ ] Can you check the `balanceOf()` your frontend address in the **YourToken** of the `Debug Contracts` tab?
-- [ ] Can you `transfer()` your token to another account and check _that_ account's `balanceOf`?
+- [x] Can you check the `balanceOf()` your frontend address in the **FreeToken** of the `Debug Contracts` tab?
+- [x] Can you `transfer()` your token to another account and check _that_ account's `balanceOf`?
 
 (Use an incognito window to create a new address and try sending to that new address. Use the `transfer()` function in the `Debug Contracts` tab.)
 
@@ -83,7 +104,7 @@ Use a price variable named `tokensPerEth` set to **100**:
 uint256 public constant tokensPerEth = 100;
 ```
 
-> 📝 The `buyTokens()` function in `Vendor.sol` should use `msg.value` and `tokensPerEth` to calculate an amount of tokens to `yourToken.transfer()` to `msg.sender`.
+> 📝 The `buyTokens()` function in `Vendor.sol` should use `msg.value` and `tokensPerEth` to calculate an amount of tokens to `FreeToken.transfer()` to `msg.sender`.
 
 > 📟 Emit **event** `BuyTokens(address buyer, uint256 amountOfEth, uint256 amountOfTokens)` when tokens are purchased.
 
@@ -92,13 +113,13 @@ Edit `deploy/01_deploy_vendor.ts` to deploy the `Vendor` (uncomment Vendor deplo
 You will also want to change `00_deploy_your_token.ts` and `01_deploy_vendor.ts` so you transfer the tokens to the `vendor.address` instead of your frontend address.
 
 ```js
-const result = await yourToken.transfer(
+const result = await FreeToken.transfer(
   vendor.address,
   ethers.utils.parseEther("1000")
 );
 ```
 
-(You will use the `YourToken` UI tab and the frontend for most of your testing. Most of the UI is already built for you for this challenge.)
+(You will use the `FreeToken` UI tab and the frontend for most of your testing. Most of the UI is already built for you for this challenge.)
 
 > 📝 Edit `Vendor.sol` to inherit _Ownable_.
 
@@ -112,15 +133,17 @@ await vendor.transferOwnership("**YOUR FRONTEND ADDRESS**");
 
 #### 🥅 Goals
 
-- [ ] Does the `Vendor` address start with a `balanceOf` **1000** in `YourToken` on the `Debug Contracts` tab?
-- [ ] Can you buy **10** tokens for **0.1** ETH?
-- [ ] Can you transfer tokens to a different account?
-- [ ] Can the `owner` withdraw the ETH from the `Vendor`?
+- [x] Does the `Vendor` address start with a `balanceOf` **1000** in `FreeToken` on the `Debug Contracts` tab?
+- [x] Can you buy **10** tokens for **0.1** ETH?
+- [x] Can you transfer tokens to a different account?
+- [x] Can the `owner` withdraw the ETH from the `Vendor`?
 
 #### ⚔️ Side Quests
 
-- [ ] Can _anyone_ withdraw? Test _everything_!
+- [x] Can _anyone_ withdraw? Test _everything_!
+  - No, only the owner can
 - [ ] What if you minted **2000** and only sent **1000** to the `Vendor`?
+  - 1,000 would be owned by the account used to deploy the FreeToken contract
 
 ---
 
@@ -130,21 +153,23 @@ await vendor.transferOwnership("**YOUR FRONTEND ADDRESS**");
 
 🧐 The reason why this is hard is the `approve()` pattern in ERC20s.
 
-😕 First, the user has to call `approve()` on the `YourToken` contract, approving the `Vendor` contract address to take some amount of tokens.
+😕 First, the user has to call `approve()` on the `FreeToken` contract, approving the `Vendor` contract address to take some amount of tokens.
 
 🤨 Then, the user makes a _second transaction_ to the `Vendor` contract to `sellTokens()`.
 
-🤓 The `Vendor` should call `yourToken.transferFrom(msg.sender, address(this), theAmount)` and if the user has approved the `Vendor` correctly, tokens should transfer to the `Vendor` and ETH should be sent to the user.
+🤓 The `Vendor` should call `FreeToken.transferFrom(msg.sender, address(this), theAmount)` and if the user has approved the `Vendor` correctly, tokens should transfer to the `Vendor` and ETH should be sent to the user.
 
-(Use the `Debug Contracts` tab to call the approve and sellTokens() at first but then look in the `YourToken.tsx` for the extra approve/sell UI to uncomment.)
+(Use the `Debug Contracts` tab to call the approve and sellTokens() at first but then look in the `FreeToken.tsx` for the extra approve/sell UI to uncomment.)
 
 #### 🥅 Goal
 
-- [ ] Can you sell tokens back to the vendor and receive ETH?
+- [x] Can you sell tokens back to the vendor and receive ETH?
 
 #### ⚔️ Side Quest
 
-- [ ] Should we disable the `owner` withdraw to keep liquidity in the `Vendor`?
+- [x] Should we disable the `owner` withdraw to keep liquidity in the `Vendor`?
+  - If we want people to be able to sell back their tokens and we aren't taking a cut
+then we would have to
 
 ---
 
